@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cilium-repro-orchestrator
+  namespace: cilium-repro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cilium-repro-orchestrator
+  template:
+    metadata:
+      labels:
+        app: cilium-repro-orchestrator
+    spec:
+      serviceAccountName: cilium-repro-orchestrator
+      nodeSelector:
+        kubernetes.io/hostname: <your-cordoned-node>
+      tolerations:
+        - key: node.kubernetes.io/unschedulable
+          operator: Exists
+          effect: NoSchedule
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: orchestrator
+          image: <your-registry>/cilium-repro-orchestrator:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: TARGET_HOST
+              value: "<ip-or-hostname-of-target-server>"
+            - name: TARGET_PORT
+              value: "9000"
+            - name: CLIENT_IMAGE
+              value: "<your-registry>/cilium-repro-client:latest"
+            - name: NAMESPACE
+              value: "cilium-repro"
+            - name: NODE_NAME
+              value: "<your-cordoned-node>"
+            - name: TARGET_RATE_PER_MIN
+              value: "20"
+            - name: NUM_CONNECTIONS
+              value: "10"
